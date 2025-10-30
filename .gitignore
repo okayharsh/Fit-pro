@@ -1,0 +1,5 @@
+# Ignore environment and private files
+.env
+*.db
+__pycache__/
+credentials.json
