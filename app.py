@@ -10,7 +10,6 @@ from groq import Groq
 # ---------------- DATABASE CONNECTION ----------------
 # ---------------- DATABASE CONNECTION ----------------
 
-
 # -----------------------------
 # DATABASE INITIALIZATION FIX ✅
 # -----------------------------
@@ -32,11 +31,6 @@ def init_db():
     conn.close()
 
 init_db()
-
-
-
-
-
 
 # -------------------------------------------------------
 # CONFIGURATION
@@ -98,7 +92,7 @@ else:
     st.error("GROQ_API_KEY missing in .env — AI features disabled.")
 
 # -------------------------------------------------------
-# DATABASE
+# DATABASE FUNCTIONS
 # -------------------------------------------------------
 DB_FILE = "fitness_app.db"
 
@@ -232,7 +226,7 @@ st.markdown("""
 
 st.markdown('<div class="app-header">FIT PRO 💪</div>', unsafe_allow_html=True)
 
-# ---------------- EMAIL LOGIN SECTION ----------------
+# ---------------- EMAIL LOGIN FIXED ✅ ----------------
 if "user_email" not in st.session_state:
     st.session_state["user_email"] = ""
 if "is_premium" not in st.session_state:
@@ -242,23 +236,28 @@ st.markdown("### ✉️ Enter your email to continue:")
 email_input = st.text_input("Email Address", placeholder="example@gmail.com")
 
 if email_input.strip() != "":
-    st.session_state["user_email"] = email_input
+    # ✅ Reset session when a new email is entered
+    if email_input != st.session_state["user_email"]:
+        st.session_state["user_email"] = email_input
+        st.session_state["is_premium"] = False
+        st.rerun()
 
 if st.session_state["user_email"] == "":
     st.warning("⚠️ Please enter your email to use FIT PRO.")
     st.stop()
 
-# Get plan from database
+# ✅ Always fetch fresh plan type for current email
 plan_type = get_plan_type(st.session_state["user_email"])
-if plan_type == "Premium":
-    st.session_state["is_premium"] = True
+st.session_state["is_premium"] = (plan_type == "Premium")
+
+if st.session_state["is_premium"]:
     st.success(f"🌟 You are on the **Premium Plan** — Welcome, {st.session_state['user_email']}!")
 else:
     st.info(f"✅ You are on the **Basic Plan** — Logged in as {st.session_state['user_email']}")
 
 st.markdown("---")
 
-# Navigation Buttons
+# Navigation
 nav_items = ["🏋️ Gym Plan", "🍽️ Diet Plan", "🔥 Calorie Tracker", "🤖 Chatbot", "💳 Premium"]
 if "active_tab" not in st.session_state:
     st.session_state["active_tab"] = "🏋️ Gym Plan"
@@ -398,7 +397,7 @@ elif tab == "💳 Premium":
             - Smart Chatbot Assistant  
             """)
 
-            payment_link = "https://rzp.io/rzp/5VHFcVO1"  # Razorpay link
+            payment_link = "https://rzp.io/rzp/5VHFcVO1"
             st.markdown(f"[🛒 Pay ₹299 on Razorpay]({payment_link})", unsafe_allow_html=True)
 
             payment_id = st.text_input("💳 Enter your Payment ID (e.g., pay_XXXXXXXXXXXX):")
