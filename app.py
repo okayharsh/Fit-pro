@@ -1,92 +1,122 @@
-import streamlit as st
-import sqlite3
-from groq import Groq
-from datetime import datetime, timedelta
-import pandas as pd
-import time
 import os
+import time
+import sqlite3
+from datetime import datetime, timedelta
+import streamlit as st
+import pandas as pd
 from dotenv import load_dotenv
-load_dotenv()
+from groq import Groq
 
-
-# ------------------ PAGE CONFIG ------------------
+# -------------------------------------------------------
+# CONFIGURATION
+# -------------------------------------------------------
 st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
 
+# ------------------------- STYLES -------------------------
 st.markdown("""
     <style>
+        .main { background-color: #0f1113; color: #ffffff; }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: nowrap;
+            margin-bottom: 40px;
+        }
+
         .stButton>button {
-            background-color: #ff2e2e; color: white; font-weight: bold; border-radius: 8px;
+            background-color: #111;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 150px;
+            text-align: center;
+            white-space: nowrap;
         }
-        .summary-box {
-            background-color: #f5f5f5; border-radius: 10px; padding: 10px;
-            border: 1px solid #ddd; margin-top: 10px;
+
+        .stButton>button:hover {
+            background-color: #1e1e1e;
+            border-color: #888;
+            transform: translateY(-2px);
         }
-        .unlock-btn {
-            background-color:#ff2e2e; color:#fff; padding:8px 12px; border-radius:8px; text-decoration:none;
-            font-weight:bold;
+
+        .stButton>button:focus {
+            border-color: #ffb703;
+            box-shadow: 0 0 10px #ffb70355;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# ------------------ KEYS & LINKS ------------------
+# -------------------------------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# -------------------------------------------------------
+load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-RAZORPAY_PAGE_URL = "https://rzp.io/rzp/ci6Oh3C"
 
+client = None
+if GROQ_API_KEY:
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+    except Exception as e:
+        st.warning(f"⚠️ Groq init failed: {e}")
+else:
+    st.error("GROQ_API_KEY missing in .env — AI features disabled.")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY)
+# -------------------------------------------------------
+# DATABASE
+# -------------------------------------------------------
+DB_FILE = "fitness_app.db"
 
+def ensure_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE,
+                plan TEXT,
+                expiry TEXT,
+                payment_id TEXT
+            )
+        """)
+        conn.commit()
 
-# ------------------ DATABASE ------------------
-with sqlite3.connect("fitness_app.db") as conn:
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE,
-            plan TEXT,
-            expiry TEXT,
-            payment_id TEXT
-        )
-    """)
-    conn.commit()
+ensure_db()
 
-# ------------------ HELPERS ------------------
-def add_user(name, plan, payment_id):
+def add_or_update_user(email, plan, payment_id):
     expiry_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
-    conn = sqlite3.connect("fitness_app.db")
-    c = conn.cursor()
-    c.execute("SELECT id FROM users WHERE name=?", (name,))
-    if c.fetchone():
-        c.execute("UPDATE users SET plan=?, expiry=?, payment_id=? WHERE name=?", (plan, expiry_date, payment_id, name))
-    else:
-        c.execute("INSERT INTO users (name, plan, expiry, payment_id) VALUES (?, ?, ?, ?)",
-                  (name, plan, expiry_date, payment_id))
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute("SELECT id FROM users WHERE email=?", (email,))
+        if c.fetchone():
+            c.execute("UPDATE users SET plan=?, expiry=?, payment_id=? WHERE email=?",
+                      (plan, expiry_date, payment_id, email))
+        else:
+            c.execute("INSERT INTO users (email, plan, expiry, payment_id) VALUES (?, ?, ?, ?)",
+                      (email, plan, expiry_date, payment_id))
+        conn.commit()
 
-def get_plan_type(name):
-    if not name:
+def get_plan_type(email):
+    if not email:
         return "Basic"
-    conn = sqlite3.connect("fitness_app.db")
-    c = conn.cursor()
-    c.execute("SELECT plan, expiry FROM users WHERE name=?", (name,))
-    result = c.fetchone()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute("SELECT plan, expiry FROM users WHERE email=?", (email,))
+        result = c.fetchone()
     if not result:
         return "Basic"
     plan, expiry = result
-    if not expiry:
-        return "Basic"
-    try:
-        exp_dt = datetime.strptime(expiry, "%Y-%m-%d")
-        if exp_dt > datetime.now():
-            return plan
-    except:
-        return "Basic"
+    if expiry and datetime.strptime(expiry, "%Y-%m-%d") > datetime.now():
+        return plan
     return "Basic"
 
-# ------------------ PROMPTS ------------------
+# -------------------------------------------------------
+# PROMPTS
+# -------------------------------------------------------
 def workout_prompt(age, sex, height, weight, experience, days, equipment, goal):
     return f"""
 You are an Indian certified gym trainer.
@@ -95,13 +125,9 @@ Age: {age}, Sex: {sex}, Height: {height} cm, Weight: {weight} kg
 Experience: {experience}, Days: {days}, Equipment: {equipment}, Goal: {goal}
 
 Rules:
-- Give day-wise exercises aligned with goal.
-- Include sets, reps, rest.
-- Example: For fat loss → more HIIT, circuit, supersets.
-  For muscle gain → hypertrophy, 8–12 reps, progressive overload.
-  For recomposition → mix both.
-  For strength → low reps, high load, compound lifts.
-Return only the workout plan in markdown.
+- Day-wise exercises aligned with goal.
+- Include sets, reps, and rest.
+Return only the plan in markdown.
 """
 
 def diet_prompt(age, weight, goal, diet_type):
@@ -109,34 +135,115 @@ def diet_prompt(age, weight, goal, diet_type):
 You are an Indian nutritionist.
 Create a 7-day Indian student-friendly diet plan for:
 Age: {age}, Weight: {weight} kg, Goal: {goal}, Diet Type: {diet_type}
-
-Rules:
-- 100% Indian meals (roti, dal, rice, paneer, etc.)
-- Each day: breakfast, lunch, dinner, snacks + approximate calories.
-- Keep meals budget-friendly (₹250/day max).
-- Align calorie goal with goal type.
 Return only the diet in markdown.
 """
 
-# ------------------ UI ------------------
-st.title("💪 FIT PRO")
-st.markdown("Your Personal Gym + Diet Assistant (Indian Edition 🇮🇳)")
+# -------------------------------------------------------
+# MAIN UI
+# -------------------------------------------------------
+st.markdown("""
+    <style>
+    div[data-testid="stSidebar"] {display: none;}
 
-name = st.text_input("Enter your email (required for Premium access):")
-plan_type = get_plan_type(name) if name else "Basic"
+    .app-header {
+        text-align: center;
+        font-size: 40px;
+        font-weight: 900;
+        color: white;
+        margin-top: 15px;
+        text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+        letter-spacing: 1px;
+    }
 
-if name:
-    if plan_type != "Basic":
-        st.success(f"Welcome back, {name}! Premium active ✅")
-    else:
-        st.info("You're currently on the Basic (Free) plan.")
+    .navbar {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 18px;
+        padding: 15px 25px;
+        margin-top: 25px;
+        background: rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(15px);
+        border-radius: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .nav-btn {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 8px 20px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s ease-in-out;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .nav-active {
+        background: linear-gradient(135deg, #ff8c00, #ffcc33);
+        color: black;
+        box-shadow: 0 0 15px rgba(255, 200, 0, 0.8);
+        transform: scale(1.05);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="app-header">FIT PRO 💪</div>', unsafe_allow_html=True)
+
+# ---------------- EMAIL LOGIN SECTION ----------------
+if "user_email" not in st.session_state:
+    st.session_state["user_email"] = ""
+if "is_premium" not in st.session_state:
+    st.session_state["is_premium"] = False
+
+st.markdown("### ✉️ Enter your email to continue:")
+email_input = st.text_input("Email Address", placeholder="example@gmail.com")
+
+if email_input.strip() != "":
+    st.session_state["user_email"] = email_input
+
+if st.session_state["user_email"] == "":
+    st.warning("⚠️ Please enter your email to use FIT PRO.")
+    st.stop()
+
+# Get plan from database
+plan_type = get_plan_type(st.session_state["user_email"])
+if plan_type == "Premium":
+    st.session_state["is_premium"] = True
+    st.success(f"🌟 You are on the **Premium Plan** — Welcome, {st.session_state['user_email']}!")
 else:
-    st.info("Enter your email to access or purchase Premium.")
+    st.info(f"✅ You are on the **Basic Plan** — Logged in as {st.session_state['user_email']}")
 
-tabs = ["🏋️ Gym Plan", "🍽️ Diet Plan", "🔥 Calorie Tracker", "🤖 Chatbot", "💳 Premium"]
-tab = st.radio("Navigation", tabs, horizontal=True, label_visibility="collapsed")
+st.markdown("---")
 
-# ------------------ GYM PLAN (only workout) ------------------
+# Navigation Buttons
+nav_items = ["🏋️ Gym Plan", "🍽️ Diet Plan", "🔥 Calorie Tracker", "🤖 Chatbot", "💳 Premium"]
+if "active_tab" not in st.session_state:
+    st.session_state["active_tab"] = "🏋️ Gym Plan"
+
+st.markdown('<div class="button-row">', unsafe_allow_html=True)
+cols = st.columns(5, gap="small")
+for i, tab_name in enumerate(nav_items):
+    if cols[i].button(tab_name, key=f"tab_{i}"):
+        st.session_state["active_tab"] = tab_name
+st.markdown('</div>', unsafe_allow_html=True)
+
+tab = st.session_state["active_tab"]
+
+# -------------------------------------------------------
+# GYM PLAN
+# -------------------------------------------------------
 if tab == "🏋️ Gym Plan":
     st.header("Generate Workout Plan")
     with st.form("gym_form"):
@@ -149,123 +256,79 @@ if tab == "🏋️ Gym Plan":
         equipment = st.selectbox("Equipment", ["Bodyweight", "Dumbbells + Bench", "Full Gym"])
         goal = st.selectbox("Goal", ["Fat Loss", "Muscle Gain", "Recomposition", "Strength"])
         submit = st.form_submit_button("Generate Workout 🚀")
-
     if submit:
-        if not name:
-            st.error("⚠️ Please enter your email first!")
-        else:
-            with st.spinner("Generating workout plan..."):
-                try:
-                    workout_res = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": workout_prompt(age, sex, height, weight, experience, days, equipment, goal)}],
-                        temperature=0.5,
-                        max_tokens=2500
-                    )
-                    workout_md = workout_res.choices[0].message.content
-                    st.markdown(workout_md)
-                except Exception as e:
-                    st.error(f"Error generating workout: {e}")
+        with st.spinner("Generating workout plan..."):
+            try:
+                res = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[{"role": "user", "content": workout_prompt(age, sex, height, weight, experience, days, equipment, goal)}],
+                    temperature=0.5
+                )
+                st.markdown(res.choices[0].message.content)
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-# ------------------ DIET PLAN (separate) ------------------
+# -------------------------------------------------------
+# DIET PLAN
+# -------------------------------------------------------
 elif tab == "🍽️ Diet Plan":
     st.header("Generate Diet Plan")
-    if not name:
-        st.error("⚠️ Please enter your email to continue.")
-    else:
-        age = st.number_input("Age", 14, 80, 22, key="diet_age")
-        weight = st.number_input("Weight (kg)", 35, 200, 70, key="diet_weight")
-        goal = st.selectbox("Goal", ["Fat Loss", "Muscle Gain", "Recomposition", "Strength"], key="diet_goal")
-        diet_type = st.selectbox("Diet Type", ["Vegetarian", "Eggetarian", "Non-Vegetarian"], key="diet_type")
-        if st.button("Generate Diet 🍛"):
-            with st.spinner("Generating diet plan..."):
-                try:
-                    res = client.chat.completions.create(
-                        model="llama-3.1-8b-instant",
-                        messages=[{"role": "user", "content": diet_prompt(age, weight, goal, diet_type)}],
-                        temperature=0.5,
-                        max_tokens=2500
-                    )
-                    st.markdown(res.choices[0].message.content)
-                except Exception as e:
-                    st.error(f"Error generating diet: {e}")
+    age = st.number_input("Age", 14, 80, 22, key="diet_age")
+    weight = st.number_input("Weight (kg)", 35, 200, 70, key="diet_weight")
+    goal = st.selectbox("Goal", ["Fat Loss", "Muscle Gain", "Recomposition", "Strength"], key="diet_goal")
+    diet_type = st.selectbox("Diet Type", ["Vegetarian", "Eggetarian", "Non-Vegetarian"], key="diet_type")
+    if st.button("Generate Diet 🍛"):
+        with st.spinner("Generating diet plan..."):
+            try:
+                res = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[{"role": "user", "content": diet_prompt(age, weight, goal, diet_type)}],
+                    temperature=0.5
+                )
+                st.markdown(res.choices[0].message.content)
+            except Exception as e:
+                st.error(f"Error generating diet: {e}")
 
-# ------------------ CALORIE TRACKER ------------------
+# -------------------------------------------------------
+# CALORIE TRACKER
+# -------------------------------------------------------
 elif tab == "🔥 Calorie Tracker":
-    st.header("🔥 Calorie Tracker (per 100g basis)")
-    if get_plan_type(name) != "Premium":
-        st.warning("🔒 Premium users only.")
+    st.header("🔥 Calorie Tracker")
+    if not st.session_state.get("is_premium", False):
+        st.warning("🔒 This feature is available only for Premium Members.")
     else:
         foods = {
             "Roti": (300, 8, 55),
             "Rice": (130, 2.7, 28),
-            "Dal": (120, 9, 15),
             "Paneer": (265, 18, 6),
             "Egg": (155, 13, 1.1),
             "Milk": (60, 3.2, 5),
             "Soya Chunks": (345, 52, 33),
-            "Poha": (130, 2.5, 27),
-            "Upma": (140, 3.4, 25),
             "Oats": (380, 13, 67),
             "Idli": (110, 3.2, 20),
             "Dosa": (165, 3.9, 31),
-            "Bread": (265, 9, 49),
-            "Rajma": (140, 9, 25),
-            "Chole": (150, 8, 27),
-            "Paratha": (300, 7, 45),
-            "Aloo Sabzi": (120, 2, 18),
             "Apple": (52, 0.3, 14),
-            "Orange": (47, 0.9, 12),
+            "Banana": (89, 1.1, 23),
             "Peanuts": (567, 25, 16),
             "Almonds": (579, 21, 22),
-            "Khichdi": (120, 5, 20),
-            "Curd": (98, 11, 4),
-            "Tofu": (120, 13, 3),
-            "Bhindi": (80, 2.6, 7),
-            "Mixed Veg": (90, 3, 12),
-            "Palak Paneer": (200, 14, 10),
-            "Dal Tadka": (180, 10, 15),
-            "Pulao": (150, 4, 25),
-            "Chapati": (270, 9, 48),
-            "Maggi": (365, 10, 56),
-            "Aloo Paratha": (280, 6, 45),
-            "Tea": (40, 1, 5),
-            "Coffee": (50, 1, 6),
-            "Green Tea": (2, 0, 0),
             "Sprouts": (90, 7, 15),
-            "Sandwich": (250, 9, 35),
-            "Pav Bhaji": (450, 9, 40),
-            "Biryani": (290, 6, 45),
             "Vegetable Soup": (60, 2, 10)
         }
+        food = st.selectbox("🍽️ Choose food:", list(foods.keys()))
+        qty = st.number_input("Quantity (grams)", 1, 1000, 100)
+        if food:
+            cal, p, c = foods[food]
+            st.markdown(f"**Calories:** {(cal/100)*qty:.1f} kcal | **Protein:** {(p/100)*qty:.1f} g | **Carbs:** {(c/100)*qty:.1f} g")
 
-        selected_food = st.selectbox("🍽️ Choose a food item:", list(foods.keys()))
-        quantity = st.number_input("⚖️ Enter quantity (in grams):", min_value=1, max_value=1000, value=100)
-
-        if selected_food and quantity:
-            cal, protein, carbs = foods[selected_food]
-            calories = (cal / 100) * quantity
-            protein_amt = (protein / 100) * quantity
-            carbs_amt = (carbs / 100) * quantity
-
-            st.markdown(f"""
-            ### 🍛 **Nutrition Info for {quantity}g {selected_food}:**
-            - **Calories:** {calories:.1f} kcal  
-            - **Protein:** {protein_amt:.1f} g  
-            - **Carbs:** {carbs_amt:.1f} g
-            """)
-
-        if st.checkbox("📊 Show all food items (per 100g)"):
-            df = pd.DataFrame(foods, index=["Calories", "Protein", "Carbs"]).T
-            st.dataframe(df)
-
-# ------------------ CHATBOT ------------------
+# -------------------------------------------------------
+# CHATBOT
+# -------------------------------------------------------
 elif tab == "🤖 Chatbot":
-    if get_plan_type(name) != "Premium":
-        st.warning("💬 Available only for Premium users.")
+    st.header("🤖 FIT PRO Chatbot")
+    if not st.session_state.get("is_premium", False):
+        st.warning("💬 Chatbot is available only for Premium Members.")
     else:
-        st.header("🤖 FIT PRO Chatbot")
-        q = st.text_input("Ask your fitness/diet question:")
+        q = st.text_input("Ask your question:")
         if q:
             with st.spinner("Thinking..."):
                 try:
@@ -276,35 +339,49 @@ elif tab == "🤖 Chatbot":
                     )
                     st.markdown(ans.choices[0].message.content)
                 except Exception as e:
-                    st.error(f"Error from Chatbot: {e}")
+                    st.error(f"Chatbot error: {e}")
 
-# ------------------ PREMIUM ------------------
+# -------------------------------------------------------
+# PREMIUM SECTION
+# -------------------------------------------------------
 elif tab == "💳 Premium":
-    st.header("💳 Unlock FIT PRO Premium (₹299 / 1 Year)")
-    if not name:
-        st.error("⚠️ Please enter your email first.")
-    else:
-        if get_plan_type(name) == "Premium":
-            st.success("🎉 You already have Premium access.")
-        st.markdown(
-            f'<a class="unlock-btn" href="{RAZORPAY_PAGE_URL}" target="_blank">UNLOCK PREMIUM — Pay ₹299</a>',
-            unsafe_allow_html=True,
-        )
-        st.info("After payment, paste the Razorpay Payment ID (starts with pay_):")
-        payment_id = st.text_input("Enter Razorpay Payment ID:", key="razorpay_id")
-        if st.button("✅ Verify & Activate Premium"):
-            if payment_id.strip() == "":
-                st.error("⚠️ Please enter Razorpay Payment ID.")
-            elif not payment_id.lower().startswith("pay_"):
-                st.error("❌ Invalid Razorpay Payment ID.")
-            else:
-                try:
-                    add_user(name, "Premium", payment_id)
-                    st.success("🎉 Premium unlocked for 1 year! Refreshing...")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error activating Premium: {e}")
+    st.header("💳 Unlock FIT PRO Premium (₹299 / Year)")
 
-st.markdown("---")
-st.caption("🧠 Design by Harsh | Made with ❤️ for students & fitness lovers.")
+    user_email = st.text_input("📧 Enter your email:")
+    if user_email.strip() == "":
+        st.warning("⚠️ Please enter your email first.")
+    else:
+        plan_type = get_plan_type(user_email)
+        if plan_type == "Premium":
+            st.success("🎉 You are a Premium Member!")
+            st.markdown("✨ Enjoy access to advanced plans and exclusive features!")
+        else:
+            st.info("💡 You are currently on the **Basic Plan**.")
+
+            st.markdown("""
+            💰 **FIT PRO Premium – ₹299 / Year**
+            🔓 Unlock features:
+            - Advanced Workout Plans  
+            - Indian Diet Generator  
+            - Calorie Tracker  
+            - Smart Chatbot Assistant  
+            """)
+
+            payment_link = "https://rzp.io/rzp/5VHFcVO1"  # Razorpay link
+            st.markdown(f"[🛒 Pay ₹299 on Razorpay]({payment_link})", unsafe_allow_html=True)
+
+            payment_id = st.text_input("💳 Enter your Payment ID (e.g., pay_XXXXXXXXXXXX):")
+
+            if st.button("✅ Verify & Activate Premium"):
+                if payment_id.startswith("pay_"):
+                    add_or_update_user(user_email, "Premium", payment_id)
+                    st.session_state["is_premium"] = True
+                    st.success("🎉 Payment verified! Premium access granted for 1 year.")
+                    st.balloons()
+                    time.sleep(1)
+                    st.experimental_rerun()
+                else:
+                    st.error("❌ Invalid Payment ID. Please check and try again.")
+
+    st.markdown("---")
+    st.caption("💗 Designed by Harsh | Made with 💖 for Students & Fitness Lovers IN")
