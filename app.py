@@ -7,6 +7,32 @@ import pandas as pd
 from dotenv import load_dotenv
 from groq import Groq
 
+# ---------------- DATABASE CONNECTION ----------------
+# ---------------- DATABASE CONNECTION ----------------
+import sqlite3
+import os
+
+# Force absolute path to your DB file
+DB_PATH = os.path.join(os.path.dirname(__file__), "fitness_app.db")
+
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+c = conn.cursor()
+
+# Force table creation (if not exists)
+c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE,
+    plan TEXT DEFAULT 'free',
+    expiry TEXT
+)
+""")
+conn.commit()
+
+print("✅ Database connected at:", DB_PATH)
+
+
+
 # -------------------------------------------------------
 # CONFIGURATION
 # -------------------------------------------------------
