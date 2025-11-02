@@ -244,7 +244,7 @@ email_input = st.text_input("Email Address", placeholder="example@gmail.com")
 
 if email_input.strip() != "":
     # ✅ Reset session when a new email is entered
-    if email_input != st.session_state["user_email"]
+    if email_input != st.session_state["user_email"]:
         st.session_state["user_email"] = email_input
         st.session_state["is_premium"] = False
         st.rerun()
