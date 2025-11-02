@@ -9,27 +9,32 @@ from groq import Groq
 
 # ---------------- DATABASE CONNECTION ----------------
 # ---------------- DATABASE CONNECTION ----------------
-import sqlite3
-import os
 
-# Force absolute path to your DB file
-DB_PATH = os.path.join(os.path.dirname(__file__), "fitness_app.db")
 
-conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-c = conn.cursor()
+# -----------------------------
+# DATABASE INITIALIZATION FIX ✅
+# -----------------------------
+DB_NAME = "fitness_app.db"
 
-# Force table creation (if not exists)
-c.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    plan TEXT DEFAULT 'free',
-    expiry TEXT
-)
-""")
-conn.commit()
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE,
+        plan TEXT DEFAULT 'free',
+        expiry TEXT,
+        payment_id TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
 
-print("✅ Database connected at:", DB_PATH)
+init_db()
+
+
+
 
 
 
