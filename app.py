@@ -94,7 +94,7 @@ else:
 # -------------------------------------------------------
 # DATABASE FUNCTIONS
 # -------------------------------------------------------
-DB_FILE = "fitness_app.db"
+DB_FILE = os.path.join(os.path.dirname(__file__), "fitness_app.db")
 
 def ensure_db():
     with sqlite3.connect(DB_FILE) as conn:
@@ -118,11 +118,15 @@ def add_or_update_user(email, plan, payment_id):
         c = conn.cursor()
         c.execute("SELECT id FROM users WHERE email=?", (email,))
         if c.fetchone():
-            c.execute("UPDATE users SET plan=?, expiry=?, payment_id=? WHERE email=?",
-                      (plan, expiry_date, payment_id, email))
+            c.execute(
+                "UPDATE users SET plan=?, expiry=?, payment_id=? WHERE email=?",
+                (plan, expiry_date, payment_id, email)
+            )
         else:
-            c.execute("INSERT INTO users (email, plan, expiry, payment_id) VALUES (?, ?, ?, ?)",
-                      (email, plan, expiry_date, payment_id))
+            c.execute(
+                "INSERT INTO users (email, plan, expiry, payment_id) VALUES (?, ?, ?, ?)",
+                (email, plan, expiry_date, payment_id)
+            )
         conn.commit()
 
 def get_plan_type(email):
@@ -135,9 +139,12 @@ def get_plan_type(email):
     if not result:
         return "Basic"
     plan, expiry = result
-    if expiry and datetime.strptime(expiry, "%Y-%m-%d") > datetime.now():
+    if not expiry:
+        return "Basic"
+    if datetime.strptime(expiry, "%Y-%m-%d") > datetime.now():
         return plan
     return "Basic"
+
 
 # -------------------------------------------------------
 # PROMPTS
@@ -237,7 +244,7 @@ email_input = st.text_input("Email Address", placeholder="example@gmail.com")
 
 if email_input.strip() != "":
     # ✅ Reset session when a new email is entered
-    if email_input != st.session_state["user_email"]:
+    if email_input != st.session_state["user_email"]
         st.session_state["user_email"] = email_input
         st.session_state["is_premium"] = False
         st.rerun()
