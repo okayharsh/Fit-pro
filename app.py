@@ -416,7 +416,7 @@ elif tab == "💳 Premium":
                     st.success("🎉 Payment verified! Premium access granted for 1 year.")
                     st.balloons()
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()  # ✅ FIXED HERE
                 else:
                     st.error("❌ Invalid Payment ID. Please check and try again.")
 
