@@ -79,21 +79,25 @@ st.markdown("""
 # -------------------------------------------------------
 # LOAD ENVIRONMENT VARIABLES
 # -------------------------------------------------------
+# ------------------------------------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# ------------------------------------------------------------
+
+# Load .env file (for local) and Streamlit secrets (for cloud)
 load_dotenv()
-GROQ_API_KEY = st.secrets("GROQ_API_KEY")
+
+# Try to get API key from .env or Streamlit secrets
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
 
 client = None
+
 if GROQ_API_KEY:
-
-
-try:
-    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-    client = Groq(api_key=GROQ_API_KEY)
-except Exception as e:
-    st.error(f"⚠️ Groq init failed or missing key: {e}")
-
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+    except Exception as e:
+        st.error(f"⚠️ Groq init failed: {e}")
 else:
-    st.error("GROQ_API_KEY missing in .env — AI features disabled.")
+    st.error("❌ GROQ_API_KEY not found — AI features disabled.")
 
 # -------------------------------------------------------
 # DATABASE FUNCTIONS
