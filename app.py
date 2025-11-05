@@ -7,6 +7,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from groq import Groq
 
+
 # ---------------- DATABASE CONNECTION ----------------
 # ---------------- DATABASE CONNECTION ----------------
 
@@ -32,10 +33,29 @@ def init_db():
 
 init_db()
 
+
 # -------------------------------------------------------
 # CONFIGURATION
 # -------------------------------------------------------
 st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
+
+import json
+
+# Load manifest.json contents
+with open("manifest.json") as f:
+    manifest_data = json.load(f)
+
+st.markdown(f"""
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f1113">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FIT PRO">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/dumbbell.png">
+""", unsafe_allow_html=True)
+
+
+
 
 # ------------------------- STYLES -------------------------
 st.markdown("""
