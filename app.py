@@ -242,6 +242,10 @@ st.markdown("""
 st.markdown('<div class="app-header">FIT PRO 💪</div>', unsafe_allow_html=True)
 
 # ---------------- EMAIL LOGIN FIXED ✅ ----------------
+# ---------------------- APP HEADER ----------------------
+#st.title("FIT PRO 💪")
+
+# ---------------------- EMAIL LOGIN FIXED ✅ ----------------------
 if "user_email" not in st.session_state:
     st.session_state["user_email"] = ""
 if "is_premium" not in st.session_state:
@@ -250,12 +254,22 @@ if "is_premium" not in st.session_state:
 st.markdown("### ✉️ Enter your email to continue:")
 email_input = st.text_input("Email Address", placeholder="example@gmail.com")
 
+# ✅ Email validation function
+def is_valid_email(email):
+    import re
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(pattern, email) is not None
+
 if email_input.strip() != "":
-    # ✅ Reset session when a new email is entered
-    if email_input != st.session_state["user_email"]:
-        st.session_state["user_email"] = email_input
-        st.session_state["is_premium"] = False
-        st.rerun()
+    if not is_valid_email(email_input):
+        st.error("❌ Invalid email format. Please enter a valid email (e.g., example@gmail.com).")
+        st.stop()
+    else:
+        # ✅ Reset session when a new valid email is entered
+        if email_input != st.session_state["user_email"]:
+            st.session_state["user_email"] = email_input
+            st.session_state["is_premium"] = False
+            st.rerun()
 
 if st.session_state["user_email"] == "":
     st.warning("⚠️ Please enter your email to use FIT PRO.")
@@ -269,6 +283,7 @@ if st.session_state["is_premium"]:
     st.success(f"🌟 You are on the **Premium Plan** — Welcome, {st.session_state['user_email']}!")
 else:
     st.info(f"✅ You are on the **Basic Plan** — Logged in as {st.session_state['user_email']}")
+
 
 st.markdown("---")
 
@@ -313,26 +328,46 @@ if tab == "🏋️ Gym Plan":
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# -------------------------------------------------------
-# DIET PLAN
-# -------------------------------------------------------
+# ------------------------------------------------------
+# 🥗 DIET PLAN (PREMIUM FEATURE)
+# --------------------------------------------------
 elif tab == "🍽️ Diet Plan":
-    st.header("Generate Diet Plan")
-    age = st.number_input("Age", 14, 80, 22, key="diet_age")
-    weight = st.number_input("Weight (kg)", 35, 200, 70, key="diet_weight")
-    goal = st.selectbox("Goal", ["Fat Loss", "Muscle Gain", "Recomposition", "Strength"], key="diet_goal")
-    diet_type = st.selectbox("Diet Type", ["Vegetarian", "Eggetarian", "Non-Vegetarian"], key="diet_type")
-    if st.button("Generate Diet 🍛"):
-        with st.spinner("Generating diet plan..."):
-            try:
-                res = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": diet_prompt(age, weight, goal, diet_type)}],
-                    temperature=0.5
-                )
-                st.markdown(res.choices[0].message.content)
-            except Exception as e:
-                st.error(f"Error generating diet: {e}")
+    st.header("🥗 Personalized Diet Plan")
+
+    # Check if user is premium
+    if st.session_state.get("is_premium", False):
+
+        age = st.number_input("Age", 14, 80, 22, key="diet_age")
+        weight = st.number_input("Weight (kg)", 35, 200, 70, key="diet_weight")
+        goal = st.selectbox("Goal", ["Fat Loss", "Muscle Gain", "Recomposition", "Strength"], key="diet_goal")
+        diet_type = st.selectbox("Diet Type", ["Vegetarian", "Eggetarian", "Non-Vegetarian"], key="diet_type")
+
+        if st.button("Generate Premium Diet 🍱"):
+            with st.spinner("Crafting your personalized premium diet plan..."):
+                try:
+                    prompt = f"""
+                    Create a detailed 7-day Indian diet plan for a {diet_type} who wants {goal}.
+                    Age: {age}, Weight: {weight}kg.
+                    Include: Breakfast, Lunch, Snacks, and Dinner.
+                    Provide daily calorie total and protein estimation.
+                    """
+
+                    res = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.5,
+                    )
+
+                    st.success("🎯 Premium Diet Plan Generated Successfully!")
+                    st.markdown(res.choices[0].message.content)
+
+                except Exception as e:
+                    st.error(f"Error generating diet plan: {e}")
+
+    else:
+        st.warning("🚫 This feature is for **Premium Members** only.")
+        st.info("✨ Unlock personalized diet plans, advanced workouts, and smart coaching for ₹299/year in the Premium tab!")
+
 
 # -------------------------------------------------------
 # CALORIE TRACKER
