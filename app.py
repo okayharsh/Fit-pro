@@ -39,11 +39,10 @@ init_db()
 # -------------------------------------------------------
 import json
 
-# Load manifest.json contents
+# Load manifest.json contents and inject into page
 with open("manifest.json", "r") as f:
     manifest_data = json.load(f)
 
-# ✅ Inject manifest directly into HTML (so Safari/Chrome detect it)
 st.markdown(f"""
     <script type="application/manifest+json">
     {json.dumps(manifest_data)}
@@ -53,6 +52,20 @@ st.markdown(f"""
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FIT PRO 💪">
     <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/dumbbell.png">
+    <link rel="icon" href="https://img.icons8.com/color/192/dumbbell.png" type="image/png">
+    <link rel="shortcut icon" href="https://img.icons8.com/color/192/dumbbell.png" type="image/png">
+""", unsafe_allow_html=True)
+# -------------------------------------------------------
+# REGISTER SERVICE WORKER (Fix PWA loading issue)
+# -------------------------------------------------------
+st.markdown("""
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { scope: './' })
+  .then(() => console.log('✅ Service Worker Registered'))
+  .catch(err => console.log('❌ Service Worker Failed:', err));
+}
+</script>
 """, unsafe_allow_html=True)
 
 
@@ -203,62 +216,54 @@ Return only the diet in markdown.
 # MAIN UI
 # -------------------------------------------------------
 st.markdown("""
-    <style>
-    div[data-testid="stSidebar"] {display: none;}
+<style>
+/* ------------------- APP HEADER ------------------- */
+.app-header {
+    text-align: center;
+    font-size: 65px;
+    font-weight: 900;
+    margin-top: 40px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px rgba(0, 140, 255, 0.6), 0 0 40px rgba(0, 140, 255, 0.3);
+    animation: glowPulse 3s ease-in-out infinite alternate;
+}
 
-    .app-header {
-        text-align: center;
-        font-size: 40px;
-        font-weight: 900;
-        color: white;
-        margin-top: 15px;
-        text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
-        letter-spacing: 1px;
-    }
+/* Smooth glow animation */
+@keyframes glowPulse {
+    from { text-shadow: 0 0 15px rgba(0, 140, 255, 0.4), 0 0 25px rgba(0, 140, 255, 0.2); }
+    to { text-shadow: 0 0 35px rgba(0, 180, 255, 0.8), 0 0 55px rgba(0, 180, 255, 0.4); }
+}
 
-    .navbar {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 18px;
-        padding: 15px 25px;
-        margin-top: 25px;
-        background: rgba(255, 255, 255, 0.06);
-        backdrop-filter: blur(15px);
-        border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-        width: fit-content;
-        margin-left: auto;
-        margin-right: auto;
-    }
+/* ------------------- SCROLLBAR ------------------- */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00aaff, #004aad);
+    border-radius: 10px;
+}
 
-    .nav-btn {
-        background: rgba(255, 255, 255, 0.08);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 8px 20px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.25s ease-in-out;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-    }
+/* ------------------- FORM INPUTS (Modern Glass Look) ------------------- */
+.stNumberInput, .stSelectbox, .stTextInput {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    padding: 18px 15px !important;
+    margin-bottom: 18px !important;
+    transition: all 0.3s ease-in-out !important;
+}
 
-    .nav-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-    }
+/* ...rest of that new code... */
 
-    .nav-active {
-        background: linear-gradient(135deg, #ff8c00, #ffcc33);
-        color: black;
-        box-shadow: 0 0 15px rgba(255, 200, 0, 0.8);
-        transform: scale(1.05);
-    }
-    </style>
+
+</style>
 """, unsafe_allow_html=True)
+
 
 st.markdown('<div class="app-header">FIT PRO 💪</div>', unsafe_allow_html=True)
 
