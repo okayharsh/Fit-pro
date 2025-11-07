@@ -7,6 +7,11 @@ import pandas as pd
 from dotenv import load_dotenv
 from groq import Groq
 
+st.set_page_config(
+    page_title="FIT PRO ",
+    page_icon="💪",
+    layout="centered"
+)
 
 # -------------------------------------------------------
 # LOAD MANIFEST + PWA METADATA (for auto install prompt)
@@ -22,7 +27,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# REGISTER SERVICE WORKER
+# REGISTER SERVICE WORKER (must be after manifest)
 # -------------------------------------------------------
 st.markdown("""
 <script>
@@ -41,13 +46,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
             if (choiceResult.outcome === 'accepted') {
-                console.log('App installed ✅');
+                console.log('✅ App installed');
             } else {
-                console.log('User dismissed ❌');
+                console.log('❌ User dismissed install');
             }
             deferredPrompt = null;
         });
-    }, 3000); // 3 seconds after app loads
+    }, 3000); // prompt 3 seconds after load
 });
 </script>
 """, unsafe_allow_html=True)
