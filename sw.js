@@ -1,10 +1,14 @@
 self.addEventListener('install', event => {
-  console.log('Service Worker Installed');
   event.waitUntil(
-    caches.open('fitpro-cache').then(cache => {
-      return cache.addAll(['/', '/?homescreen=1']);
+    caches.open('fitpro-cache-v1').then(cache => {
+      return cache.addAll([
+        '/',
+        '/?utm_source=pwa',
+        '/manifest.json',
+      ]);
     })
   );
+  console.log('✅ Service Worker installed');
 });
 
 self.addEventListener('fetch', event => {

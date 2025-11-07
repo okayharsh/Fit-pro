@@ -8,6 +8,38 @@ from dotenv import load_dotenv
 from groq import Groq
 
 
+st.set_page_config(
+    page_title="FIT PRO ",
+    page_icon="💪",
+    layout="centered"
+)
+# -------------------------------------------------------
+# LOAD MANIFEST + PWA METADATA (Fix for iOS & Android)
+# -------------------------------------------------------
+import json
+st.markdown("""
+    <link rel="manifest" href="https://fitpro-yourusername.streamlit.app/manifest.json">
+    <meta name="theme-color" content="#0f1113">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FIT PRO 💪">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/dumbbell.png">
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------------
+# REGISTER SERVICE WORKER (must be after manifest)
+# -------------------------------------------------------
+st.markdown("""
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('https://fitpro-yourusername.streamlit.app/sw.js')
+  .then(() => console.log('✅ Service Worker Registered'))
+  .catch(err => console.log('❌ Service Worker Failed:', err));
+}
+</script>
+""", unsafe_allow_html=True)
+
+
 # ---------------- DATABASE CONNECTION ----------------
 # ---------------- DATABASE CONNECTION ----------------
 
