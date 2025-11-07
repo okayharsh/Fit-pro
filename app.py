@@ -14,48 +14,74 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------
-# LOAD MANIFEST + PWA METADATA (for auto install prompt)
-# -------------------------------------------------------
-import json
-st.markdown("""
-    <link rel="manifest" href="https://fitpro-harsh.streamlit.app/manifest.json">
-    <meta name="theme-color" content="#0047AB">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FIT PRO 💪">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/dumbbell.png">
-""", unsafe_allow_html=True)
-
-# -------------------------------------------------------
-# REGISTER SERVICE WORKER (must be after manifest)
+# SMART INSTALL BUTTON (Works on Android & Desktop)
 # -------------------------------------------------------
 st.markdown("""
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('https://fitpro-harsh.streamlit.app/sw.js')
-  .then(() => console.log('✅ Service Worker Registered'))
-  .catch(err => console.log('❌ Service Worker Failed:', err));
+<style>
+#install-btn {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #0047AB, #0f1113);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 9999;
+  transition: all 0.3s ease;
 }
+#install-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+</style>
 
-// AUTO INSTALL PROMPT (fires once)
+<button id="install-btn">📲 Install FIT PRO</button>
+
+<script>
 let deferredPrompt;
+const installBtn = document.getElementById('install-btn');
+
+// Listen for the install event
 window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    setTimeout(() => {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('✅ App installed');
-            } else {
-                console.log('❌ User dismissed install');
-            }
-            deferredPrompt = null;
-        });
-    }, 3000); // prompt 3 seconds after load
+  e.preventDefault();
+  deferredPrompt = e;
+
+  // Show the button if not shown before
+  if (!localStorage.getItem('fitpro_install_prompted')) {
+    installBtn.style.display = 'block';
+  }
+
+  installBtn.addEventListener('click', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('✅ FIT PRO installed');
+        localStorage.setItem('fitpro_install_prompted', 'true');
+      } else {
+        console.log('❌ User dismissed');
+      }
+      deferredPrompt = null;
+    });
+  });
+});
+
+// Hide the button if already installed
+window.addEventListener('appinstalled', () => {
+  console.log('🎉 App installed');
+  installBtn.style.display = 'none';
+  localStorage.setItem('fitpro_install_prompted', 'true');
 });
 </script>
 """, unsafe_allow_html=True)
+
+
 
 
 # ---------------- DATABASE CONNECTION ----------------
