@@ -8,18 +8,13 @@ from dotenv import load_dotenv
 from groq import Groq
 
 
-st.set_page_config(
-    page_title="FIT PRO ",
-    page_icon="💪",
-    layout="centered"
-)
 # -------------------------------------------------------
-# LOAD MANIFEST + PWA METADATA (Fix for iOS & Android)
+# LOAD MANIFEST + PWA METADATA (for auto install prompt)
 # -------------------------------------------------------
 import json
 st.markdown("""
-    <link rel="manifest" href="https://fitpro-yourusername.streamlit.app/manifest.json">
-    <meta name="theme-color" content="#0f1113">
+    <link rel="manifest" href="https://fitpro-harsh.streamlit.app/manifest.json">
+    <meta name="theme-color" content="#0047AB">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FIT PRO 💪">
@@ -27,15 +22,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------
-# REGISTER SERVICE WORKER (must be after manifest)
+# REGISTER SERVICE WORKER
 # -------------------------------------------------------
 st.markdown("""
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('https://fitpro-yourusername.streamlit.app/sw.js')
+  navigator.serviceWorker.register('https://fitpro-harsh.streamlit.app/sw.js')
   .then(() => console.log('✅ Service Worker Registered'))
   .catch(err => console.log('❌ Service Worker Failed:', err));
 }
+
+// AUTO INSTALL PROMPT (fires once)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('App installed ✅');
+            } else {
+                console.log('User dismissed ❌');
+            }
+            deferredPrompt = null;
+        });
+    }, 3000); // 3 seconds after app loads
+});
 </script>
 """, unsafe_allow_html=True)
 
