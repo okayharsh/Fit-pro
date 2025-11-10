@@ -271,6 +271,8 @@ for i, label in enumerate(tabs):
     if cols[i].button(label):
         st.session_state["active_tab"] = label
 st.markdown('</div>', unsafe_allow_html=True)
+tab = st.session_state.get("active_tab", "🏋️ Gym Plan")
+
 
 tab = st.session_state["active_tab"]
 
@@ -424,7 +426,7 @@ elif tab == "💳 Premium":
                     st.success("🎉 Payment verified! Premium access granted for 1 year.")
                     st.balloons()  # 🎈🎈🎈
                     time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("❌ Invalid Payment ID. Please check and try again.")
 
