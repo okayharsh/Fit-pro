@@ -1,14 +1,23 @@
 {
-  "name": "FIT PRO",
+  "name": "FIT PRO 💪",
   "short_name": "FIT PRO",
   "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f1113",
-  "theme_color": "#0ea5ff",
+  "theme_color": "#f0a51f",
   "orientation": "portrait",
   "description": "Your AI-powered fitness coach with workouts, diet plans, calorie tracking and chatbot.",
+  "lang": "en",
+  "categories": ["fitness", "health", "ai", "nutrition", "training"],
+
   "icons": [
+    {
+      "src": "icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
@@ -22,13 +31,16 @@
       "purpose": "any maskable"
     }
   ],
+
   "screenshots": [
     {
       "src": "screenshot1.png",
       "sizes": "1080x1920",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
+
   "shortcuts": [
     {
       "name": "Open FIT PRO",
