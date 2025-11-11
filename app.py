@@ -14,25 +14,106 @@ import json
 # =========================
 st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
 
-# =========================
+# ============================
 # PWA: MANIFEST + IOS META
-# =========================
+# ============================
 st.markdown("""
-<!-- Force refresh manifest and icons for all browsers -->
-<link rel="manifest" href="manifest.json?v=3">
-<meta name="theme-color" content="#0f1113">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="FIT PRO">
+<script>
+// ✅ Universal Chrome Install Prompt (Android + iOS)
+let deferredPrompt;
 
-<!-- iOS icon -->
-<link rel="apple-touch-icon" href="icon-192-v2.png?v=3">
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  console.log("✅ beforeinstallprompt triggered");
 
-<!-- Favicon + Android PWA icons -->
-<link rel="icon" type="image/png" sizes="96x96" href="icon-96-v2.png?v=3">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192-v2.png?v=3">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512-v2.png?v=3">
+  // Create a glowing install button dynamically
+  const btn = document.createElement('button');
+  btn.textContent = "📲 Install FIT PRO";
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: white;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 0 18px rgba(14,165,255,.6);
+    font-size: 15px;
+    z-index: 9999;
+    cursor: pointer;
+  `;
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      localStorage.setItem('fitpro_installed', 'true');
+    }
+    deferredPrompt = null;
+    btn.remove();
+  });
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log("🎉 FIT PRO installed successfully!");
+});
+</script>
 """, unsafe_allow_html=True)
+# Chrome install prompt (Android + iOS)
+st.markdown("""
+<script>
+// ✅ Universal Chrome Install Prompt (Android + iOS)
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  console.log("✅ beforeinstallprompt triggered");
+
+  // Create glowing install button dynamically
+  const btn = document.createElement('button');
+  btn.textContent = "📲 Install FIT PRO";
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: white;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 0 18px rgba(14,165,255,.6);
+    font-size: 15px;
+    z-index: 9999;
+    cursor: pointer;
+  `;
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      localStorage.setItem('fitpro_installed', 'true');
+    }
+    deferredPrompt = null;
+    btn.remove();
+  });
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log("🎉 FIT PRO installed successfully!");
+});
+</script>
+""", unsafe_allow_html=True)
+
+
 
 
 # 2) Register service worker
