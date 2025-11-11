@@ -17,16 +17,23 @@ st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
 # =========================
 # PWA: MANIFEST + IOS META
 # =========================
-# 1) Link your manifest (absolute + relative as fallback)
 st.markdown("""
-<link rel="manifest" href="https://fit-pro-iftgf8g5tmaxtchhzaxnp9.streamlit.app/manifest.json">
-<link rel="manifest" href="manifest.json">
+<!-- Force refresh manifest and icons for all browsers -->
+<link rel="manifest" href="manifest.json?v=3">
 <meta name="theme-color" content="#0f1113">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FIT PRO">
-<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- iOS icon -->
+<link rel="apple-touch-icon" href="icon-192-v2.png?v=3">
+
+<!-- Favicon + Android PWA icons -->
+<link rel="icon" type="image/png" sizes="96x96" href="icon-96-v2.png?v=3">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192-v2.png?v=3">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512-v2.png?v=3">
 """, unsafe_allow_html=True)
+
 
 # 2) Register service worker
 st.markdown("""
@@ -251,27 +258,57 @@ st.markdown("---")
 # PROMPTS
 # =========================
 def workout_prompt(age, sex, height, weight, experience, days, equipment, goal):
+    # --- Goal-specific instructions ---
+    goal_instructions = {
+        "Fat Loss": """
+Prioritize high-intensity full-body circuits, compound lifts, supersets, and short rest (30–45 s).
+Add cardio 4–5×/week, focus on calorie burn and endurance. Moderate weights, higher reps (12–20).""",
+        
+        "Muscle Gain": """
+Focus on hypertrophy (8–12 reps, 3–4 sets). Emphasize progressive overload,
+split by muscle groups, minimal cardio, longer rest (60–90 s). Include isolation movements.""",
+        
+        "Recomposition": """
+Blend hypertrophy + strength. Use compound lifts (6–10 reps) with accessory isolation work.
+Add 1–2 cardio/HIIT sessions weekly. Maintain balance between volume and recovery.""",
+        
+        "Strength": """
+Emphasize low-rep heavy compound lifts (3–6 reps) such as squat, bench, deadlift, overhead press.
+Include accessory lifts for stability. Rest 2–3 min between heavy sets. Minimal cardio."""
+    }
+
+    specific_goal_info = goal_instructions.get(goal, "Focus on balanced full-body functional training.")
+
+    # --- Dynamic prompt respecting user’s chosen training days ---
     return f"""
-You are an Indian certified gym trainer.
-Create a 7-day workout plan:
-Age: {age}, Sex: {sex}, Height: {height} cm, Weight: {weight} kg
-Experience: {experience}, Days/week: {days}, Equipment: {equipment}, Goal: {goal}
-Include day-wise exercises with sets, reps, and rest. Return only markdown.
+You are an experienced Indian certified gym trainer.
+
+Design a **{days}-day workout plan** (not 7) based on the user's schedule and goal.
+
+User details:
+- Age: {age}
+- Sex: {sex}
+- Height: {height} cm
+- Weight: {weight} kg
+- Experience: {experience}
+- Available days per week: {days}
+- Equipment: {equipment}
+- Goal: {goal}
+
+Training philosophy for this goal:
+{specific_goal_info}
+
+Requirements:
+- Plan **exactly {days} distinct days** (e.g., Day 1 – Day {days})
+- Include: Exercise names, sets, reps, rest period, and short notes
+- Make sure each goal type feels **unique**:
+  • Fat Loss → cardio + circuits + lighter loads  
+  • Muscle Gain → split training + hypertrophy volume  
+  • Recomposition → strength + hypertrophy mix  
+  • Strength → compound + heavy + power moves  
+- Use realistic Indian gym exercises
+- Output **only markdown**, well formatted and organized
 """
-
-# =========================
-# NAV + TABS
-# =========================
-tabs = ["🏋️ Gym Plan", "🍽️ Diet Plan", "🔥 Calorie Tracker", "🤖 Chatbot", "💳 Premium"]
-if "active_tab" not in st.session_state: st.session_state["active_tab"] = tabs[0]
-
-st.markdown('<div class="button-row">', unsafe_allow_html=True)
-cols = st.columns(len(tabs), gap="small")
-for i, label in enumerate(tabs):
-    if cols[i].button(label):
-        st.session_state["active_tab"] = label
-st.markdown('</div>', unsafe_allow_html=True)
-tab = st.session_state.get("active_tab", "🏋️ Gym Plan")
 
 
 tab = st.session_state["active_tab"]
