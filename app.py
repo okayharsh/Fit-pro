@@ -14,6 +14,24 @@ import json
 # BASIC APP SETTINGS
 # =========================
 st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
+# Hide Streamlit GitHub icon & menu
+st.markdown("""
+    <style>
+    /* Hide the Streamlit GitHub repo icon */
+    [data-testid="stAppViewBlockContainer"] a[href*="github"] {
+        display: none !important;
+    }
+
+    /* Hide the 'View source' link in the top-right corner */
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+
+    /* Optional: Hide the bottom “Made with Streamlit” footer */
+    footer {visibility: hidden;}
+    </style>
+""", unsafe_allow_html=True)
+
 
 # =========================
 # PWA + SERVICE WORKER + INSTALL BUTTON (keeps original behavior)
