@@ -1,3 +1,4 @@
+# app.py (cleaned & fixed)
 import os
 import time
 import sqlite3
@@ -14,20 +15,17 @@ import json
 # =========================
 st.set_page_config(page_title="FIT PRO", page_icon="💪", layout="centered")
 
-# ============================
-# PWA: MANIFEST + IOS META
-# ============================
+# =========================
+# PWA + SERVICE WORKER + INSTALL BUTTON (keeps original behavior)
+# =========================
 st.markdown("""
 <script>
-// ✅ Universal Chrome Install Prompt (Android + iOS)
+// Universal Chrome Install Prompt (Android + iOS)
 let deferredPrompt;
-
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   console.log("✅ beforeinstallprompt triggered");
-
-  // Create a glowing install button dynamically
   const btn = document.createElement('button');
   btn.textContent = "📲 Install FIT PRO";
   btn.style.cssText = `
@@ -46,77 +44,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
     cursor: pointer;
   `;
   document.body.appendChild(btn);
-
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     deferredPrompt.prompt();
     const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      localStorage.setItem('fitpro_installed', 'true');
-    }
+    if (result.outcome === 'accepted') localStorage.setItem('fitpro_installed', 'true');
     deferredPrompt = null;
     btn.remove();
   });
 });
-
-window.addEventListener('appinstalled', () => {
-  console.log("🎉 FIT PRO installed successfully!");
-});
-</script>
-""", unsafe_allow_html=True)
-# Chrome install prompt (Android + iOS)
-st.markdown("""
-<script>
-// ✅ Universal Chrome Install Prompt (Android + iOS)
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  console.log("✅ beforeinstallprompt triggered");
-
-  // Create glowing install button dynamically
-  const btn = document.createElement('button');
-  btn.textContent = "📲 Install FIT PRO";
-  btn.style.cssText = `
-    position: fixed;
-    bottom: 22px;
-    right: 22px;
-    padding: 14px 22px;
-    background: linear-gradient(135deg, #00c6ff, #0072ff);
-    color: white;
-    font-weight: 700;
-    border: none;
-    border-radius: 14px;
-    box-shadow: 0 0 18px rgba(14,165,255,.6);
-    font-size: 15px;
-    z-index: 9999;
-    cursor: pointer;
-  `;
-  document.body.appendChild(btn);
-
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    deferredPrompt.prompt();
-    const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      localStorage.setItem('fitpro_installed', 'true');
-    }
-    deferredPrompt = null;
-    btn.remove();
-  });
-});
-
 window.addEventListener('appinstalled', () => {
   console.log("🎉 FIT PRO installed successfully!");
 });
 </script>
 """, unsafe_allow_html=True)
 
-
-
-
-# 2) Register service worker
 st.markdown("""
 <script>
 if ('serviceWorker' in navigator) {
@@ -127,19 +69,9 @@ if ('serviceWorker' in navigator) {
 </script>
 """, unsafe_allow_html=True)
 
-# 3) Smart “Install App” button (Android + Desktop)
 st.markdown("""
 <style>
-#install-btn {
-  display:none;
-  position: fixed;
-  bottom: 22px; right: 22px;
-  background: linear-gradient(135deg, #0ea5ff, #0f1113);
-  color: #fff; border: none; border-radius: 14px;
-  padding: 14px 20px; font-size: 15px; font-weight: 700;
-  box-shadow: 0 8px 24px rgba(14,165,255,.35);
-  cursor: pointer; z-index: 9999; transition: all .25s ease;
-}
+#install-btn { display:none; position: fixed; bottom: 22px; right: 22px; background: linear-gradient(135deg, #0ea5ff, #0f1113); color: #fff; border: none; border-radius: 14px; padding: 14px 20px; font-size: 15px; font-weight: 700; box-shadow: 0 8px 24px rgba(14,165,255,.35); cursor: pointer; z-index: 9999; transition: all .25s ease; }
 #install-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(14,165,255,.45); }
 </style>
 <button id="install-btn">📲 Install FIT PRO</button>
@@ -164,77 +96,74 @@ window.addEventListener('appinstalled', () => {
 </script>
 """, unsafe_allow_html=True)
 
+
 # =========================
-# GLOBAL STYLES (UI EXACT LOOK)
+# GLOBAL STYLES (Neon / Glass look)
 # =========================
 st.markdown("""
 <style>
 /* Background + base text */
 html, body, .main { background:#0f1113 !important; color:#e7eef6 !important; }
 
-/* Header with electric-blue neon pulse */
+/* App header */
 .app-header{
-  text-align:center; margin:34px 0 8px 0;
-  font-size:64px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
+  text-align:center; margin:24px 0 8px 0;
+  font-size:48px; font-weight:900; letter-spacing:2px; text-transform:uppercase;
   background: linear-gradient(90deg,#00c6ff,#0072ff);
   -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  text-shadow: 0 0 18px rgba(14,165,255,.55), 0 0 42px rgba(14,165,255,.25);
-  animation: glowPulse 2.8s ease-in-out infinite alternate;
-}
-@keyframes glowPulse {
-  from { text-shadow: 0 0 14px rgba(14,165,255,.45), 0 0 28px rgba(14,165,255,.2); }
-  to   { text-shadow: 0 0 28px rgba(14,165,255,.85), 0 0 56px rgba(14,165,255,.35); }
+  text-shadow: 0 0 18px rgba(14,165,255,.45);
 }
 
-/* Tabs row */
-/* Tabs row (Fix: single-line, equal width, electric glow on active) */
-.button-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin: 25px auto 30px;
-  flex-wrap: nowrap; /* ✅ prevents breaking to next line */
-  overflow-x: auto;
+/* Neon-styled Streamlit tabs (horizontal) */
+[data-testid="stTabs"] {
+    background: rgba(255,255,255,0.02);
+    border-radius: 14px;
+    padding: 8px;
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 8px 30px rgba(0, 150, 255, 0.03);
+}
+[data-testid="stTab"] {
+    background: rgba(255,255,255,0.03);
+    color: #cfefff;
+    border-radius: 12px;
+    margin: 0 6px;
+    padding: 10px 18px;
+    transition: all 0.25s ease-in-out;
+    font-weight: 700;
+    font-size: 15px;
+    border: 1px solid rgba(0,0,0,0.25);
+}
+[data-testid="stTab"]:hover {
+    background: rgba(0, 204, 255, 0.06);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 16px rgba(0,204,255,0.35);
+}
+[data-testid="stTab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: #ffffff;
+    box-shadow: 0 0 25px rgba(0,204,255,0.8);
+    text-shadow: 0 0 8px rgba(255,255,255,0.6);
+    border: none;
 }
 
-.stButton>button {
-  background: #12151a;
-  color: #f0f6ff;
-  border: 1px solid #26313f;
-  border-radius: 14px;
-  width: 170px; /* ✅ fixed width for perfect alignment */
-  height: 48px;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap; /* ✅ keep text in one line */
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
-  transition: all 0.25s ease-in-out;
-}
-
-.stButton>button:hover {
-  border-color: #00c6ff;
-  box-shadow: 0 0 12px #00c6ffaa;
-  transform: translateY(-1px);
-}
-
-/* Inputs - clean glassy */
+/* Inputs style */
 .stNumberInput, .stTextInput, .stSelectbox{
-  background: rgba(255,255,255,.06) !important;
-  border-radius:14px !important; backdrop-filter:blur(8px) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05) !important;
+  background: rgba(255,255,255,.04) !important;
+  border-radius:12px !important; backdrop-filter:blur(6px) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03) !important;
 }
 
-/* Section headers */
-h1, h2, h3{ color:#e6f3ff; }
-
-/* Scrollbar */
-::-webkit-scrollbar{ width:10px; } 
-::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#00aaff,#004aad); border-radius:8px; }
+/* Smaller adjustments */
+h1, h2, h3 { color:#e6f3ff; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">FIT PRO 💪</div>', unsafe_allow_html=True)
+
 
 # =========================
 # DB INIT
@@ -282,6 +211,7 @@ def get_plan_type(email):
 
 init_db()
 
+
 # =========================
 # ENV + GROQ CLIENT
 # =========================
@@ -296,8 +226,9 @@ if GROQ_API_KEY:
 else:
     st.warning("🔑 GROQ_API_KEY missing — AI features disabled.")
 
+
 # =========================
-# EMAIL LOGIN (FIXED)
+# EMAIL LOGIN (keeps your logic)
 # =========================
 if "user_email" not in st.session_state: st.session_state["user_email"] = ""
 if "is_premium" not in st.session_state: st.session_state["is_premium"] = False
@@ -335,32 +266,26 @@ else:
 
 st.markdown("---")
 
+
 # =========================
-# PROMPTS
+# PROMPTS (keep your workout_prompt)
 # =========================
 def workout_prompt(age, sex, height, weight, experience, days, equipment, goal):
-    # --- Goal-specific instructions ---
     goal_instructions = {
         "Fat Loss": """
 Prioritize high-intensity full-body circuits, compound lifts, supersets, and short rest (30–45 s).
 Add cardio 4–5×/week, focus on calorie burn and endurance. Moderate weights, higher reps (12–20).""",
-        
         "Muscle Gain": """
 Focus on hypertrophy (8–12 reps, 3–4 sets). Emphasize progressive overload,
 split by muscle groups, minimal cardio, longer rest (60–90 s). Include isolation movements.""",
-        
         "Recomposition": """
 Blend hypertrophy + strength. Use compound lifts (6–10 reps) with accessory isolation work.
 Add 1–2 cardio/HIIT sessions weekly. Maintain balance between volume and recovery.""",
-        
         "Strength": """
 Emphasize low-rep heavy compound lifts (3–6 reps) such as squat, bench, deadlift, overhead press.
 Include accessory lifts for stability. Rest 2–3 min between heavy sets. Minimal cardio."""
     }
-
     specific_goal_info = goal_instructions.get(goal, "Focus on balanced full-body functional training.")
-
-    # --- Dynamic prompt respecting user’s chosen training days ---
     return f"""
 You are an experienced Indian certified gym trainer.
 
@@ -392,13 +317,20 @@ Requirements:
 """
 
 
-tab = st.session_state["active_tab"]
+# =========================
+# NEON GLASS ST TABS (single, clean)
+# =========================
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🏋️ Workout Plan",
+    "🍽️ Diet Plan",
+    "🔥 Calorie Tracker",
+    "🤖 Chatbot",
+    "💳 Premium"
+])
 
-# =========================
-# GYM PLAN
-# =========================
-if tab == "🏋️ Gym Plan":
-    st.header("Generate Workout Plan")
+# ---------------- TAB 1: WORKOUT PLAN ----------------
+with tab1:
+    st.header("🏋️ Generate Workout Plan")
     with st.form("gym_form"):
         age = st.number_input("Age", 14, 80, 22)
         sex = st.selectbox("Sex", ["Male", "Female", "Other"])
@@ -425,11 +357,9 @@ if tab == "🏋️ Gym Plan":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-# =========================
-# DIET PLAN (Premium)
-# =========================
-elif tab == "🍽️ Diet Plan":
-    st.header("🥗 Personalized Diet Plan (Premium)")
+# ---------------- TAB 2: DIET PLAN ----------------
+with tab2:
+    st.header("🍽️ Personalized Diet Plan (Premium)")
     if not st.session_state["is_premium"]:
         st.warning("🔒 This feature is for **Premium members**.")
         st.info("Unlock it in the **Premium** tab for ₹299/year.")
@@ -461,10 +391,8 @@ Return markdown only.
                     except Exception as e:
                         st.error(f"Error generating diet plan: {e}")
 
-# =========================
-# CALORIE TRACKER
-# =========================
-elif tab == "🔥 Calorie Tracker":
+# ---------------- TAB 3: CALORIE TRACKER ----------------
+with tab3:
     st.header("🔥 Calorie Tracker")
     if not st.session_state["is_premium"]:
         st.warning("🔒 Available only for Premium members.")
@@ -491,10 +419,8 @@ elif tab == "🔥 Calorie Tracker":
         cal, p, c = foods[food]
         st.markdown(f"**Calories:** {(cal/100)*qty:.1f} kcal | **Protein:** {(p/100)*qty:.1f} g | **Carbs:** {(c/100)*qty:.1f} g")
 
-# =========================
-# CHATBOT
-# =========================
-elif tab == "🤖 Chatbot":
+# ---------------- TAB 4: CHATBOT ----------------
+with tab4:
     st.header("🤖 FIT PRO Chatbot")
     if not st.session_state["is_premium"]:
         st.warning("💬 Chatbot is available only for Premium members.")
@@ -512,10 +438,8 @@ elif tab == "🤖 Chatbot":
                 except Exception as e:
                     st.error(f"Chatbot error: {e}")
 
-# =========================
-# PREMIUM
-# =========================
-elif tab == "💳 Premium":
+# ---------------- TAB 5: PREMIUM ----------------
+with tab5:
     st.header("💳 Unlock FIT PRO Premium (₹299 / Year)")
     user_email = st.text_input("📧 Enter your email:")
     if not user_email.strip():
@@ -542,11 +466,12 @@ elif tab == "💳 Premium":
                 if payment_id.startswith("pay_"):
                     add_or_update_user(user_email, "Premium", payment_id)
                     st.success("🎉 Payment verified! Premium access granted for 1 year.")
-                    st.balloons()  # 🎈🎈🎈
+                    st.balloons()
                     time.sleep(1)
                     st.rerun()
                 else:
                     st.error("❌ Invalid Payment ID. Please check and try again.")
+
 
 st.markdown("---")
 st.caption("💗 Designed by Harsh | Made with 💖 for Students & Fitness Lovers IN")
