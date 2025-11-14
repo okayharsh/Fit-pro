@@ -3,3 +3,29 @@
 *.db
 __pycache__/
 credentials.json
+# Hide databases
+*.db
+*.sqlite3
+
+# Hide secrets
+*.env
+secrets.json
+secret_key.py
+credentials.json
+api_keys.txt
+token.txt
+
+# Hide compiled/temporary files
+__pycache__/
+*.pyc
+
+# Hide premium logic files
+premium_logic.py
+auth_logic.py
+payments_backend.py
+
+# Hide local config
+config_local.py
+
+# Hide service worker extra
+service_worker_dev.js
