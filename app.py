@@ -213,7 +213,7 @@ if "user_email" not in st.session_state:
 if "is_premium" not in st.session_state:
     st.session_state["is_premium"] = False
 
-st.markdown("###✉️ Enter your email to continue:")
+st.markdown("✉️ Enter your email to continue:")
 email_input = st.text_input("Email Address", placeholder="example@gmail.com")
 
 import re
@@ -467,7 +467,7 @@ elif tab == "💳 Premium":
             - Calorie Tracker  
             - Smart Chatbot Assistant  
             """)
-            payment_link = "https://rzp.io/rzp/5VHFcVO1"
+            payment_link = "https://rzp.io/rzp/peRgfyS"
             st.markdown(f"[🛒 Pay ₹299 on Razorpay]({payment_link})", unsafe_allow_html=True)
 
             payment_id = st.text_input("💳 Enter your Payment ID:")
